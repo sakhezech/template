@@ -4,8 +4,20 @@ from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
 from subprocess import run
+from typing import Any
 
 import combustache
+
+
+def process_files(path: Path, data: dict[str, Any]) -> None:
+    for file_path in path.iterdir():
+        new_path = Path(combustache.render(str(file_path), data))
+        file_path.rename(new_path)
+
+        if new_path.is_dir():
+            process_files(new_path, data)
+        else:
+            new_path.write_text(combustache.render(new_path.read_text(), data))
 
 
 def clone_template(url: str, dir: Path, branch: str | None = None) -> None:
@@ -13,13 +25,6 @@ def clone_template(url: str, dir: Path, branch: str | None = None) -> None:
     if branch:
         run(['git', 'switch', branch], cwd=dir)
         run(['git', 'switch', '--detach', branch], cwd=dir).check_returncode()
-
-    ls_proc = run(
-        ['git', 'ls-tree', '-r', '--name-only', 'HEAD'],
-        cwd=dir,
-        capture_output=True,
-    )
-    ls_proc.check_returncode()
 
     data = {
         'project': {'name': dir.name},
@@ -38,13 +43,10 @@ def clone_template(url: str, dir: Path, branch: str | None = None) -> None:
         'date': datetime.now(),
     }
 
-    for rel_file_path_str in ls_proc.stdout.decode().splitlines():
-        file_path = dir / rel_file_path_str
-
-        file_path.write_text(combustache.render(file_path.read_text(), data))
-        shutil.move(file_path, Path(combustache.render(str(file_path), data)))
-
     shutil.rmtree(dir / '.git')
+
+    process_files(dir, data)
+
     run(['git', 'init'], cwd=dir).check_returncode()
     run(['git', 'add', '-A'], cwd=dir).check_returncode()
     run(
