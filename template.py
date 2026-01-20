@@ -55,9 +55,22 @@ def clone_template(url: str, dir: Path, branch: str | None = None) -> None:
     ).check_returncode()
 
 
+_url_types = {
+    # HACK: hardcoded local path
+    'local': lambda x: str(Path('~/Public/').expanduser() / x),
+    'raw': lambda x: x,
+    'github': lambda x: f'https://github.com/{x}',
+}
+
+
 def _make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--local', action='store_true')
+    parser.add_argument(
+        '-t',
+        '--type',
+        choices=_url_types.keys(),
+        default=list(_url_types.keys())[0],
+    )
     parser.add_argument('-b', '--branch')
     parser.add_argument('url')
     parser.add_argument('dir', type=Path)
@@ -67,10 +80,7 @@ def _make_parser() -> argparse.ArgumentParser:
 def _cli(argv: Sequence[str] | None = None) -> None:
     parser = _make_parser()
     args = parser.parse_args(argv)
-    # HACK: hardcoded local path
-    if args.local:
-        args.url = str(Path('~/Public/').expanduser() / args.url)
-
+    args.url = _url_types[args.type](args.url)
     if args.dir.exists():
         print(f'directory already exists: {args.dir}', file=sys.stderr)
         sys.exit(1)
