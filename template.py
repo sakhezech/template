@@ -20,10 +20,20 @@ def clone_template(url: str, dir: Path, branch: str | None = None) -> None:
     )
     ls_proc.check_returncode()
 
-    # HACK: hardcoded data
     data = {
-        'project_name': 'PROJECT',
-        'author': 'AUTHOR',
+        'project': {'name': dir.name},
+        'git': {
+            'name': run(
+                ['git', 'config', 'get', 'user.name'], capture_output=True
+            )
+            .stdout.decode()
+            .strip(),
+            'email': run(
+                ['git', 'config', 'get', 'user.email'], capture_output=True
+            )
+            .stdout.decode()
+            .strip(),
+        },
         'date': datetime.now(),
     }
 
