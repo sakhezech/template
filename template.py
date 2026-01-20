@@ -11,6 +11,7 @@ import combustache
 def clone_template(url: str, dir: Path, branch: str | None = None) -> None:
     run(['git', 'clone', url, dir]).check_returncode()
     if branch:
+        run(['git', 'switch', branch], cwd=dir)
         run(['git', 'switch', '--detach', branch], cwd=dir).check_returncode()
 
     ls_proc = run(
