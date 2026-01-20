@@ -21,8 +21,8 @@ def process_files(path: Path, data: dict[str, Any]) -> None:
             new_path.write_text(combustache.render(new_path.read_text(), data))
 
 
-def clone_template(url: str, dir: Path, branch: str | None = None) -> None:
-    run(['git', 'clone', url, dir]).check_returncode()
+def clone_template(repo: str, dir: Path, branch: str | None = None) -> None:
+    run(['git', 'clone', repo, dir]).check_returncode()
     if branch:
         run(['git', 'switch', branch], cwd=dir)
         run(['git', 'switch', '--detach', branch], cwd=dir).check_returncode()
@@ -55,7 +55,7 @@ def clone_template(url: str, dir: Path, branch: str | None = None) -> None:
     ).check_returncode()
 
 
-_url_types = {
+_repo_types = {
     # HACK: hardcoded local path
     'local': lambda x: str(Path('~/Public/').expanduser() / x),
     'raw': lambda x: x,
@@ -68,11 +68,11 @@ def _make_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '-t',
         '--type',
-        choices=_url_types.keys(),
-        default=list(_url_types.keys())[0],
+        choices=_repo_types.keys(),
+        default=list(_repo_types.keys())[0],
     )
     parser.add_argument('-b', '--branch')
-    parser.add_argument('url')
+    parser.add_argument('repo')
     parser.add_argument('dir', type=Path)
     return parser
 
@@ -80,12 +80,12 @@ def _make_parser() -> argparse.ArgumentParser:
 def _cli(argv: Sequence[str] | None = None) -> None:
     parser = _make_parser()
     args = parser.parse_args(argv)
-    args.url = _url_types[args.type](args.url)
+    args.repo = _repo_types[args.type](args.repo)
     if args.dir.exists():
         print(f'directory already exists: {args.dir}', file=sys.stderr)
         sys.exit(1)
     try:
-        clone_template(args.url, args.dir, args.branch)
+        clone_template(args.repo, args.dir, args.branch)
     except Exception as err:
         shutil.rmtree(args.dir, ignore_errors=True)
         print(err, file=sys.stderr)
