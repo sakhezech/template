@@ -1,5 +1,6 @@
 import argparse
 import shutil
+import sys
 from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
@@ -69,7 +70,16 @@ def _cli(argv: Sequence[str] | None = None) -> None:
     # HACK: hardcoded local path
     if args.local:
         args.url = str(Path('~/Public/').expanduser() / args.url)
-    clone_template(args.url, args.dir, args.branch)
+
+    if args.dir.exists():
+        print(f'directory already exists: {args.dir}', file=sys.stderr)
+        sys.exit(1)
+    try:
+        clone_template(args.url, args.dir, args.branch)
+    except Exception as err:
+        shutil.rmtree(args.dir, ignore_errors=True)
+        print(err, file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == '__main__':
