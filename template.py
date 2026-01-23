@@ -1,4 +1,5 @@
 import argparse
+import json
 import shutil
 import sys
 from collections.abc import Sequence
@@ -57,12 +58,18 @@ def clone_template(repo: str, dir: Path, branch: str | None = None) -> None:
     ).check_returncode()
 
 
-_repo_types = {
-    # HACK: hardcoded local path
-    'local': lambda x: str(Path('~/Public/').expanduser() / x),
-    'raw': lambda x: x,
-    'github': lambda x: f'https://github.com/{x}',
+_config = {
+    'types': {'raw': '{}', 'github': 'https://github.com/{}'},
+    'default': 'raw',
 }
+_config_path = Path('~/.config/template/config.json').expanduser()
+try:
+    if _config_path.exists():
+        _config.update(json.loads(_config_path.read_text()))
+except json.JSONDecodeError as err:
+    print(f"couldn't decode config: {err}", file=sys.stderr)
+_repo_types = _config['types']
+_default_type = _config['default']
 
 
 def _make_parser() -> argparse.ArgumentParser:
@@ -71,7 +78,7 @@ def _make_parser() -> argparse.ArgumentParser:
         '-t',
         '--type',
         choices=_repo_types.keys(),
-        default=list(_repo_types.keys())[0],
+        default=_default_type,
     )
     parser.add_argument('-b', '--branch')
     parser.add_argument('repo')
@@ -82,7 +89,7 @@ def _make_parser() -> argparse.ArgumentParser:
 def _cli(argv: Sequence[str] | None = None) -> None:
     parser = _make_parser()
     args = parser.parse_args(argv)
-    args.repo = _repo_types[args.type](args.repo)
+    args.repo = _repo_types[args.type].format(args.repo)
     if args.dir.exists():
         print(f'directory already exists: {args.dir}', file=sys.stderr)
         sys.exit(1)
