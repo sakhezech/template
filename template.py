@@ -65,7 +65,11 @@ _config = {
 _config_path = Path('~/.config/template/config.json').expanduser()
 try:
     if _config_path.exists():
-        _config.update(json.loads(_config_path.read_text()))
+        _user_config = json.loads(_config_path.read_text())
+        if 'types' in _user_config:
+            _config['types'].update(_user_config['types'])
+        if 'default' in _user_config:
+            _config['default'] = _user_config['default']
 except json.JSONDecodeError as err:
     print(f"couldn't decode config: {err}", file=sys.stderr)
 _repo_types = _config['types']
