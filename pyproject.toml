@@ -3,7 +3,7 @@ name = 'template'
 description = 'git based project templates'
 readme = 'README.md'
 license = 'MIT'
-version = 'v0.0.1'
+dynamic = ['version']
 dependencies = ['combustache']
 
 [project.optional-dependencies]
@@ -22,6 +22,9 @@ extend-select = ['I', 'E501']
 [tool.faterunner.targets]
 check = ['ruff check .', 'ruff format --check .']
 format = ['ruff check --fix .', 'ruff format .']
+
+[tool.hatch.version]
+path = 'template.py'
 
 [build-system]
 requires = ['hatchling']

@@ -10,6 +10,8 @@ from typing import Any
 
 import combustache
 
+__version__ = 'v0.0.1'
+
 
 def process_files(path: Path, data: dict[str, Any]) -> None:
     for file_path in path.iterdir():
