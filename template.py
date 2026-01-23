@@ -147,6 +147,10 @@ def _make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     config_group = parser.add_argument_group()
 
+    parser.add_argument(
+        '-v', '--version', action='version', version=__version__
+    )
+
     config_group.add_argument(
         '--set-default',
         nargs=1,
