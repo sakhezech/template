@@ -21,7 +21,11 @@ def process_files(path: Path, data: dict[str, Any]) -> None:
         if new_path.is_dir():
             process_files(new_path, data)
         else:
-            new_path.write_text(combustache.render(new_path.read_text(), data))
+            try:
+                content = combustache.render(new_path.read_text(), data)
+                new_path.write_text(content)
+            except UnicodeDecodeError as err:
+                print(new_path, err, file=sys.stderr)
 
 
 def clone_template(repo: str, dir: Path, branch: str | None = None) -> None:
