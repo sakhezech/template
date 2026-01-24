@@ -25,12 +25,20 @@ def process_files(path: Path, data: dict[str, Any]) -> None:
 
 
 def clone_template(repo: str, dir: Path, branch: str | None = None) -> None:
-    run(['git', 'clone', repo, dir]).check_returncode()
+    clone_cmd = [
+        'git',
+        '-c',
+        'advice.detachedHead=false',
+        'clone',
+        repo,
+        dir,
+        '--single-branch',
+        '--depth',
+        '1',
+    ]
     if branch:
-        run(
-            ['git', '-c', 'advice.detachedHead=false', 'checkout', branch],
-            cwd=dir,
-        ).check_returncode()
+        clone_cmd.extend(('--branch', branch))
+    run(clone_cmd).check_returncode()
 
     data = {
         'project': {'name': dir.name},
