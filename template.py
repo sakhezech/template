@@ -2,7 +2,7 @@ import argparse
 import json
 import shutil
 import sys
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
 from subprocess import run
@@ -90,97 +90,18 @@ _repo_types = _config['types']
 _default_type = _config['default']
 
 
-def _set_default(value: str) -> None | int:
-    assert value in _repo_types, (
-        f'default value must be an existing type: {value}'
-    )
-    if _config_path.exists():
-        _user_config = json.loads(_config_path.read_text())
-    else:
-        _user_config = {}
-
-    if value != 'none':
-        _user_config['default'] = value
-    else:
-        _user_config.pop('default', None)
-
-    _config_path.parent.mkdir(parents=True, exist_ok=True)
-    _config_path.write_text(json.dumps(_user_config, indent=2))
-
-
-def _set_type(key: str, value: str) -> None | int:
-    if _config_path.exists():
-        _user_config = json.loads(_config_path.read_text())
-    else:
-        _user_config = {}
-
-    _user_config.setdefault('types', {})
-    if value != 'none':
-        _user_config['types'][key] = value
-    else:
-        _user_config['types'].pop(key, None)
-
-    _config_path.parent.mkdir(parents=True, exist_ok=True)
-    _config_path.write_text(json.dumps(_user_config, indent=2))
-
-
-class _FuncAndExit(argparse.Action):
-    def __init__(
-        self,
-        option_strings: Sequence[str],
-        dest: str,
-        const: Callable,
-        *args,
-        **kwargs,
-    ) -> None:
-        super().__init__(
-            option_strings, dest=dest, const=const, *args, **kwargs
-        )
-
-    def __call__(
-        self,
-        parser: argparse.ArgumentParser,
-        namespace: argparse.Namespace,
-        values: str | Sequence[Any] | None,
-        option_string: str | None = None,
-    ) -> None:
-        _ = namespace, option_string
-        assert values
-        if isinstance(values, str):
-            values = [values]
-        try:
-            parser.exit(self.const(*values))
-        except Exception as err:
-            print(err, file=sys.stderr)
-            parser.exit(1)
-
-
 def _make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
     init_parser = subparsers.add_parser('init')
     init_parser.set_defaults(func=do_init)
-
-    config_group = init_parser.add_argument_group()
+    config_parser = subparsers.add_parser('config')
+    config_parser.set_defaults(func=do_config)
 
     parser.add_argument(
         '-v', '--version', action='version', version=__version__
     )
 
-    config_group.add_argument(
-        '--set-default',
-        nargs=1,
-        metavar='VALUE',
-        action=_FuncAndExit,
-        const=_set_default,
-    )
-    config_group.add_argument(
-        '--set-type',
-        nargs=2,
-        metavar=('KEY', 'VALUE'),
-        action=_FuncAndExit,
-        const=_set_type,
-    )
     init_parser.add_argument(
         '-t',
         '--type',
@@ -190,6 +111,9 @@ def _make_parser() -> argparse.ArgumentParser:
     init_parser.add_argument('-b', '--branch')
     init_parser.add_argument('repo')
     init_parser.add_argument('dir', type=Path)
+
+    config_parser.add_argument('key')
+    config_parser.add_argument('value')
     return parser
 
 
@@ -197,6 +121,30 @@ def _cli(argv: Sequence[str] | None = None) -> None:
     parser = _make_parser()
     args = parser.parse_args(argv)
     args.func(**args.__dict__)
+
+
+def do_config(key: str, value: str, **_) -> None:
+    if _config_path.exists():
+        user_config = json.loads(_config_path.read_text())
+    else:
+        user_config = {}
+    *keys, last_key = key.split('.')
+    # TODO: needs better validation
+    if not ((not keys and last_key == 'default') or (keys == ['types'])):
+        raise ValueError(f'bad config key: {key}')
+
+    curr = user_config
+    for key in keys:
+        curr.setdefault(key, {})
+        curr = curr[key]
+
+    if value == 'none':
+        del curr[last_key]
+    else:
+        curr[last_key] = value
+
+    _config_path.parent.mkdir(parents=True, exist_ok=True)
+    _config_path.write_text(json.dumps(user_config, indent=2))
 
 
 def do_init(repo: str, dir: Path, type: str, branch: str | None, **_) -> None:
