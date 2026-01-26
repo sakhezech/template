@@ -159,6 +159,7 @@ def _make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
     init_parser = subparsers.add_parser('init')
+    init_parser.set_defaults(func=do_init)
 
     config_group = init_parser.add_argument_group()
 
@@ -195,14 +196,18 @@ def _make_parser() -> argparse.ArgumentParser:
 def _cli(argv: Sequence[str] | None = None) -> None:
     parser = _make_parser()
     args = parser.parse_args(argv)
-    args.repo = _repo_types[args.type].format(args.repo)
-    if args.dir.exists():
-        print(f'directory already exists: {args.dir}', file=sys.stderr)
+    args.func(**args.__dict__)
+
+
+def do_init(repo: str, dir: Path, type: str, branch: str | None, **_) -> None:
+    repo = _repo_types[type].format(repo)
+    if dir.exists():
+        print(f'directory already exists: {dir}', file=sys.stderr)
         sys.exit(1)
     try:
-        clone_template(args.repo, args.dir, args.branch)
+        clone_template(repo, dir, branch)
     except Exception as err:
-        shutil.rmtree(args.dir, ignore_errors=True)
+        shutil.rmtree(dir, ignore_errors=True)
         print(err, file=sys.stderr)
         sys.exit(1)
 
