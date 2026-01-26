@@ -10,7 +10,7 @@ dependencies = ['combustache']
 dev = ['ruff', 'faterunner']
 
 [project.scripts]
-template = 'template:_cli'
+template = 'template:cli'
 
 [tool.ruff]
 line-length = 79
