@@ -11,6 +11,7 @@ from typing import Any
 import combustache
 
 __version__ = 'v0.0.1'
+_config_path = Path('~/.config/template/config.json').expanduser()
 
 
 def process_files(path: Path, data: dict[str, Any]) -> None:
@@ -72,25 +73,26 @@ def clone_template(repo: str, dir: Path, branch: str | None = None) -> None:
     ).check_returncode()
 
 
-_config = {
-    'types': {'raw': '{}', 'github': 'https://github.com/{}'},
-    'default': 'raw',
-}
-_config_path = Path('~/.config/template/config.json').expanduser()
-try:
-    if _config_path.exists():
-        _user_config = json.loads(_config_path.read_text())
-        if 'types' in _user_config:
-            _config['types'].update(_user_config['types'])
-        if 'default' in _user_config:
-            _config['default'] = _user_config['default']
-except json.JSONDecodeError as err:
-    print(f"couldn't decode config: {err}", file=sys.stderr)
-_repo_types = _config['types']
-_default_type = _config['default']
+def load_config() -> dict:
+    config = {
+        'types': {'raw': '{}', 'github': 'https://github.com/{}'},
+        'default': 'raw',
+    }
+    try:
+        if _config_path.exists():
+            user_config = json.loads(_config_path.read_text())
+            if 'types' in user_config:
+                config['types'].update(user_config['types'])
+            if 'default' in user_config:
+                config['default'] = user_config['default']
+    except json.JSONDecodeError as err:
+        print(f"couldn't decode config: {err}", file=sys.stderr)
+    return config
 
 
 def _make_parser() -> argparse.ArgumentParser:
+    config = load_config()
+
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
     init_parser = subparsers.add_parser('init')
@@ -105,8 +107,8 @@ def _make_parser() -> argparse.ArgumentParser:
     init_parser.add_argument(
         '-t',
         '--type',
-        choices=_repo_types.keys(),
-        default=_default_type,
+        choices=config['types'].keys(),
+        default=config['default'],
     )
     init_parser.add_argument('-b', '--branch')
     init_parser.add_argument('repo')
@@ -114,6 +116,7 @@ def _make_parser() -> argparse.ArgumentParser:
 
     config_parser.add_argument('key')
     config_parser.add_argument('value')
+
     return parser
 
 
@@ -148,7 +151,8 @@ def do_config(key: str, value: str, **_) -> None:
 
 
 def do_init(repo: str, dir: Path, type: str, branch: str | None, **_) -> None:
-    repo = _repo_types[type].format(repo)
+    config = load_config()
+    repo = config['types'][type].format(repo)
     if dir.exists():
         print(f'directory already exists: {dir}', file=sys.stderr)
         sys.exit(1)
