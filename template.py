@@ -157,7 +157,10 @@ class _FuncAndExit(argparse.Action):
 
 def _make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
-    config_group = parser.add_argument_group()
+    subparsers = parser.add_subparsers()
+    init_parser = subparsers.add_parser('init')
+
+    config_group = init_parser.add_argument_group()
 
     parser.add_argument(
         '-v', '--version', action='version', version=__version__
@@ -177,15 +180,15 @@ def _make_parser() -> argparse.ArgumentParser:
         action=_FuncAndExit,
         const=_set_type,
     )
-    parser.add_argument(
+    init_parser.add_argument(
         '-t',
         '--type',
         choices=_repo_types.keys(),
         default=_default_type,
     )
-    parser.add_argument('-b', '--branch')
-    parser.add_argument('repo')
-    parser.add_argument('dir', type=Path)
+    init_parser.add_argument('-b', '--branch')
+    init_parser.add_argument('repo')
+    init_parser.add_argument('dir', type=Path)
     return parser
 
 
