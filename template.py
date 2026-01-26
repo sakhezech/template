@@ -116,7 +116,7 @@ def make_parser() -> argparse.ArgumentParser:
     init_parser.add_argument('dir', type=Path)
 
     config_parser.add_argument('key')
-    config_parser.add_argument('value')
+    config_parser.add_argument('value', nargs='?')
 
     return parser
 
@@ -127,7 +127,7 @@ def cli(argv: Sequence[str] | None = None) -> None:
     args.func(**args.__dict__)
 
 
-def do_config(key: str, value: str, **_) -> None:
+def do_config(key: str, value: str | None, **_) -> None:
     if _config_path.exists():
         user_config = json.loads(_config_path.read_text())
     else:
@@ -142,7 +142,10 @@ def do_config(key: str, value: str, **_) -> None:
         curr.setdefault(key, {})
         curr = curr[key]
 
-    if value == 'none':
+    if value is None:
+        print(curr.get(last_key, 'not set!'))
+        sys.exit(0)
+    elif value == 'none':
         del curr[last_key]
     else:
         curr[last_key] = value
