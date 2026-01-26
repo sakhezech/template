@@ -90,7 +90,7 @@ def load_config() -> dict:
     return config
 
 
-def _make_parser() -> argparse.ArgumentParser:
+def make_parser() -> argparse.ArgumentParser:
     config = load_config()
 
     parser = argparse.ArgumentParser()
@@ -120,8 +120,8 @@ def _make_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _cli(argv: Sequence[str] | None = None) -> None:
-    parser = _make_parser()
+def cli(argv: Sequence[str] | None = None) -> None:
+    parser = make_parser()
     args = parser.parse_args(argv)
     args.func(**args.__dict__)
 
@@ -165,4 +165,4 @@ def do_init(repo: str, dir: Path, type: str, branch: str | None, **_) -> None:
 
 
 if __name__ == '__main__':
-    _cli(None)
+    cli(None)
