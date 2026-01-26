@@ -94,7 +94,7 @@ def make_parser() -> argparse.ArgumentParser:
     config = load_config()
 
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers()
+    subparsers = parser.add_subparsers(dest='subparser')
     init_parser = subparsers.add_parser('init')
     init_parser.set_defaults(func=do_init)
     config_parser = subparsers.add_parser('config')
@@ -124,7 +124,11 @@ def make_parser() -> argparse.ArgumentParser:
 def cli(argv: Sequence[str] | None = None) -> None:
     parser = make_parser()
     args = parser.parse_args(argv)
-    args.func(**args.__dict__)
+    if args.subparser:
+        args.func(**args.__dict__)
+    else:
+        parser.print_help(file=sys.stderr)
+        sys.exit(1)
 
 
 def do_config(key: str, value: str | None, **_) -> None:
