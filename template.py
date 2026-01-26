@@ -109,6 +109,7 @@ def make_parser() -> argparse.ArgumentParser:
         '--type',
         choices=config['types'].keys(),
         default=config['default'],
+        dest='type_',
     )
     init_parser.add_argument('-b', '--branch')
     init_parser.add_argument('repo')
@@ -150,9 +151,9 @@ def do_config(key: str, value: str, **_) -> None:
     _config_path.write_text(json.dumps(user_config, indent=2))
 
 
-def do_init(repo: str, dir: Path, type: str, branch: str | None, **_) -> None:
+def do_init(repo: str, dir: Path, type_: str, branch: str | None, **_) -> None:
     config = load_config()
-    repo = config['types'][type].format(repo)
+    repo = config['types'][type_].format(repo)
     if dir.exists():
         print(f'directory already exists: {dir}', file=sys.stderr)
         sys.exit(1)
