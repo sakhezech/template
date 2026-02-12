@@ -73,24 +73,43 @@ def clone_template(
     run(['git', 'commit', '-m', message], cwd=dir).check_returncode()
 
 
-def load_config() -> dict:
-    config = {
+def make_default_config() -> dict:
+    return {
         'types': {'raw': '{}', 'github': 'https://github.com/{}'},
         'default': 'raw',
         'message': 'feat: initial commit',
     }
+
+
+def merge_configs(config: dict, user_config: dict) -> None:
+    for key, user_value in user_config.items():
+        if key not in config:
+            continue
+
+        config_value = config[key]
+        if type(config_value) is not type(user_value):
+            raise TypeError(
+                f"config and user value types don't match: "
+                f'{type(config_value)} != {type(user_value)} for {key}'
+            )
+        if isinstance(config_value, dict):
+            config_value.update(user_value)
+        elif isinstance(config_value, str):
+            config[key] = user_value
+        else:
+            raise TypeError(f"can't handle type: {type(config_value)}")
+
+
+def load_config() -> dict:
+    config = make_default_config()
     try:
         if _config_path.exists():
             user_config = json.loads(_config_path.read_text())
-            # HACK: this is horrible
-            if 'types' in user_config:
-                config['types'].update(user_config['types'])
-            if 'default' in user_config:
-                config['default'] = user_config['default']
-            if 'message' in user_config:
-                config['message'] = user_config['message']
+            merge_configs(config, user_config)
     except json.JSONDecodeError as err:
         print(f"couldn't decode config: {err}", file=sys.stderr)
+    except TypeError as err:
+        print(f'user config error: {err}', file=sys.stderr)
     return config
 
 
@@ -146,12 +165,6 @@ def do_config(key: str, value: str | None, **_) -> None:
     else:
         user_config = {}
     *keys, last_key = key.split('.')
-    # TODO: needs better validation
-    if not (
-        (not keys and last_key in ('default', 'message'))
-        or (keys == ['types'])
-    ):
-        raise ValueError(f'bad config key: {key}')
 
     curr = user_config
     for key in keys:
@@ -165,6 +178,14 @@ def do_config(key: str, value: str | None, **_) -> None:
         del curr[last_key]
     else:
         curr[last_key] = value
+        # NOTE: acts as a check
+        # if we can merge the default config with the new user config
+        # then the change is valid
+        try:
+            merge_configs(make_default_config(), user_config)
+        except TypeError as err:
+            print(f"couldn't modify config: {err}", file=sys.stderr)
+            sys.exit(1)
 
     _config_path.parent.mkdir(parents=True, exist_ok=True)
     _config_path.write_text(json.dumps(user_config, indent=2))
