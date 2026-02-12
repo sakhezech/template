@@ -29,7 +29,9 @@ def process_files(path: Path, data: dict[str, Any]) -> None:
                 print(new_path, err, file=sys.stderr)
 
 
-def clone_template(repo: str, dir: Path, branch: str | None = None) -> None:
+def clone_template(
+    repo: str, dir: Path, message: str, branch: str | None = None
+) -> None:
     clone_cmd = [
         'git',
         '-c',
@@ -68,23 +70,25 @@ def clone_template(repo: str, dir: Path, branch: str | None = None) -> None:
 
     run(['git', 'init'], cwd=dir).check_returncode()
     run(['git', 'add', '-A'], cwd=dir).check_returncode()
-    run(
-        ['git', 'commit', '-m', 'feat: initial commit'], cwd=dir
-    ).check_returncode()
+    run(['git', 'commit', '-m', message], cwd=dir).check_returncode()
 
 
 def load_config() -> dict:
     config = {
         'types': {'raw': '{}', 'github': 'https://github.com/{}'},
         'default': 'raw',
+        'message': 'feat: initial commit',
     }
     try:
         if _config_path.exists():
             user_config = json.loads(_config_path.read_text())
+            # HACK: this is horrible
             if 'types' in user_config:
                 config['types'].update(user_config['types'])
             if 'default' in user_config:
                 config['default'] = user_config['default']
+            if 'message' in user_config:
+                config['message'] = user_config['message']
     except json.JSONDecodeError as err:
         print(f"couldn't decode config: {err}", file=sys.stderr)
     return config
@@ -104,6 +108,11 @@ def make_parser() -> argparse.ArgumentParser:
         '-v', '--version', action='version', version=__version__
     )
 
+    init_parser.add_argument(
+        '-m',
+        '--message',
+        default=config['message'],
+    )
     init_parser.add_argument(
         '-t',
         '--type',
@@ -138,7 +147,10 @@ def do_config(key: str, value: str | None, **_) -> None:
         user_config = {}
     *keys, last_key = key.split('.')
     # TODO: needs better validation
-    if not ((not keys and last_key == 'default') or (keys == ['types'])):
+    if not (
+        (not keys and last_key in ('default', 'message'))
+        or (keys == ['types'])
+    ):
         raise ValueError(f'bad config key: {key}')
 
     curr = user_config
@@ -158,14 +170,16 @@ def do_config(key: str, value: str | None, **_) -> None:
     _config_path.write_text(json.dumps(user_config, indent=2))
 
 
-def do_init(repo: str, dir: Path, type_: str, branch: str | None, **_) -> None:
+def do_init(
+    repo: str, dir: Path, type_: str, message: str, branch: str | None, **_
+) -> None:
     config = load_config()
     repo = config['types'][type_].format(repo)
     if dir.exists():
         print(f'directory already exists: {dir}', file=sys.stderr)
         sys.exit(1)
     try:
-        clone_template(repo, dir, branch)
+        clone_template(repo, dir, message, branch)
     except Exception as err:
         shutil.rmtree(dir, ignore_errors=True)
         print(err, file=sys.stderr)
