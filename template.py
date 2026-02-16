@@ -30,7 +30,11 @@ def process_files(path: Path, data: dict[str, Any]) -> None:
 
 
 def clone_template(
-    repo: str, dir: Path, message: str, branch: str | None = None
+    repo: str,
+    dir: Path,
+    message: str,
+    data: dict[str, Any],
+    branch: str | None = None,
 ) -> None:
     clone_cmd = [
         'git',
@@ -62,7 +66,7 @@ def clone_template(
             .strip(),
         },
         'date': datetime.now(),
-    }
+    } | data
 
     shutil.rmtree(dir / '.git')
 
@@ -78,6 +82,7 @@ def make_default_config() -> dict:
         'types': {'raw': '{}', 'github': 'https://github.com/{}'},
         'default': 'raw',
         'message': 'feat: initial commit',
+        'data': {},
     }
 
 
@@ -200,7 +205,7 @@ def do_init(
         print(f'directory already exists: {dir}', file=sys.stderr)
         sys.exit(1)
     try:
-        clone_template(repo, dir, message, branch)
+        clone_template(repo, dir, message, config['data'], branch)
     except Exception as err:
         shutil.rmtree(dir, ignore_errors=True)
         print(err, file=sys.stderr)
