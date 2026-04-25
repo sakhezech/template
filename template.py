@@ -93,16 +93,17 @@ def merge_configs(config: dict, user_config: dict) -> None:
 
         config_value = config[key]
         if type(config_value) is not type(user_value):
-            raise TypeError(
-                f"config and user value types don't match: "
-                f'{type(config_value)} != {type(user_value)} for {key}'
-            )
+            try:
+                user_value = type(config_value)(user_value)
+            except Exception:
+                raise TypeError(
+                    f"config and user value types don't match: "
+                    f'{type(config_value)} != {type(user_value)} for {key}'
+                )
         if isinstance(config_value, dict):
             config_value.update(user_value)
-        elif isinstance(config_value, str):
-            config[key] = user_value
         else:
-            raise TypeError(f"can't handle type: {type(config_value)}")
+            config[key] = user_value
 
 
 def load_config() -> dict:
