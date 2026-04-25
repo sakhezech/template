@@ -180,7 +180,7 @@ def do_config(key: str, value: str | None, **_) -> None:
         print(curr.get(last_key, 'not set!'))
         sys.exit(0)
     elif value == 'none':
-        del curr[last_key]
+        curr.pop(last_key, None)
     else:
         curr[last_key] = value
         # NOTE: acts as a check
