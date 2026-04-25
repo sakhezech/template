@@ -1,8 +1,11 @@
 import argparse
+import enum
 import json
+import os
+import shlex
 import shutil
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
 from subprocess import run
@@ -12,6 +15,12 @@ import combustache
 
 __version__ = 'v0.0.1'
 _config_path = Path('~/.config/template/config.json').expanduser()
+
+
+class YesNoAsk(enum.StrEnum):
+    YES = 'yes'
+    NO = 'no'
+    ASK = 'ask'
 
 
 def process_files(path: Path, data: dict[str, Any]) -> None:
@@ -34,6 +43,7 @@ def clone_template(
     dir: Path,
     message: str,
     data: dict[str, Any],
+    run_post_script: bool | Callable[[Path], bool],
     branch: str | None = None,
 ) -> None:
     clone_cmd = [
@@ -72,6 +82,16 @@ def clone_template(
 
     process_files(dir, data)
 
+    post_script = (dir / 'template_post_script').resolve()
+    if post_script.exists() and os.access(post_script, os.EX_OK):
+        if callable(run_post_script):
+            run_post_script = run_post_script(post_script)
+        if run_post_script:
+            run([post_script], cwd=dir)
+        else:
+            print('Skipped post script execution.')
+        post_script.unlink()
+
     run(['git', 'init'], cwd=dir).check_returncode()
     run(['git', 'add', '-A'], cwd=dir).check_returncode()
     run(['git', 'commit', '-m', message], cwd=dir).check_returncode()
@@ -82,6 +102,7 @@ def make_default_config() -> dict:
         'types': {'raw': '{}', 'github': 'https://github.com/{}'},
         'default': 'raw',
         'message': 'feat: initial commit',
+        'run-post-script': YesNoAsk.ASK,
         'data': {},
     }
 
@@ -146,6 +167,11 @@ def make_parser() -> argparse.ArgumentParser:
         dest='type_',
     )
     init_parser.add_argument('-b', '--branch')
+    init_parser.add_argument(
+        '--run-post-script',
+        choices=YesNoAsk.__members__.values(),
+        default=config['run-post-script'],
+    )
     init_parser.add_argument('repo')
     init_parser.add_argument('dir', type=Path)
 
@@ -197,8 +223,20 @@ def do_config(key: str, value: str | None, **_) -> None:
     _config_path.write_text(json.dumps(user_config, indent=2))
 
 
+def _display_and_ask(post_script_path: Path) -> bool:
+    pager_cmd = shlex.split(os.environ.get('PAGER', 'less'))
+    run([*pager_cmd, '--', post_script_path])
+    return input('Execute? (Y/n):').lower() in ('', 'y', 'yes')
+
+
 def do_init(
-    repo: str, dir: Path, type_: str, message: str, branch: str | None, **_
+    repo: str,
+    dir: Path,
+    type_: str,
+    message: str,
+    run_post_script: YesNoAsk,
+    branch: str | None,
+    **_,
 ) -> None:
     config = load_config()
     repo = config['types'][type_].format(repo)
@@ -206,7 +244,18 @@ def do_init(
         print(f'directory already exists: {dir}', file=sys.stderr)
         sys.exit(1)
     try:
-        clone_template(repo, dir, message, config['data'], branch)
+        clone_template(
+            repo,
+            dir,
+            message,
+            config['data'],
+            {
+                YesNoAsk.YES: True,
+                YesNoAsk.NO: False,
+                YesNoAsk.ASK: _display_and_ask,
+            }[run_post_script],
+            branch,
+        )
     except Exception as err:
         shutil.rmtree(dir, ignore_errors=True)
         print(err, file=sys.stderr)
