@@ -241,7 +241,7 @@ def do_config(key: str, value: str | None, **_) -> None:
 def _display_and_ask(post_script_path: Path) -> bool:
     pager_cmd = shlex.split(os.environ.get('PAGER', 'less'))
     run([*pager_cmd, '--', post_script_path])
-    return input('Execute? (Y/n):').lower() in ('', 'y', 'yes')
+    return input('Execute? (Y/n): ').lower() in ('', 'y', 'yes')
 
 
 def do_init(
