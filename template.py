@@ -182,7 +182,7 @@ def make_parser() -> argparse.ArgumentParser:
     config_parser.add_argument('key')
     config_parser.add_argument('value', nargs='?')
 
-    for i_parser in [parser, init_parser, config_parser]:
+    for i_parser in [init_parser, config_parser]:
         i_parser.add_argument(
             '--logging',
             default='INFO',
