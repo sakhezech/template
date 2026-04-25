@@ -1,6 +1,7 @@
 import argparse
 import enum
 import json
+import logging
 import os
 import shlex
 import shutil
@@ -15,6 +16,8 @@ import combustache
 
 __version__ = 'v0.0.1'
 _config_path = Path('~/.config/template/config.json').expanduser()
+
+logger = logging.getLogger('template')
 
 
 class YesNoAsk(enum.StrEnum):
@@ -35,7 +38,7 @@ def process_files(path: Path, data: dict[str, Any]) -> None:
                 content = combustache.render(new_path.read_text(), data)
                 new_path.write_text(content)
             except UnicodeDecodeError as err:
-                print(new_path, err, file=sys.stderr)
+                logger.warning(f'{new_path} {err}')
 
 
 def clone_template(
@@ -89,7 +92,7 @@ def clone_template(
         if run_post_script:
             run([post_script], cwd=dir)
         else:
-            print('Skipped post script execution.')
+            logger.info('Skipped post script execution.')
         post_script.unlink()
 
     run(['git', 'init'], cwd=dir).check_returncode()
@@ -185,6 +188,10 @@ def make_parser() -> argparse.ArgumentParser:
 def cli(argv: Sequence[str] | None = None) -> None:
     parser = make_parser()
     args = parser.parse_args(argv)
+
+    logging.basicConfig(format='%(message)s')
+    logger.setLevel('INFO')
+
     if args.subparser:
         args.func(**args.__dict__)
     else:
