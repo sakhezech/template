@@ -182,6 +182,13 @@ def make_parser() -> argparse.ArgumentParser:
     config_parser.add_argument('key')
     config_parser.add_argument('value', nargs='?')
 
+    for i_parser in [parser, init_parser, config_parser]:
+        i_parser.add_argument(
+            '--logging',
+            default='INFO',
+            choices=logging.getLevelNamesMapping().keys(),
+        )
+
     return parser
 
 
@@ -190,7 +197,7 @@ def cli(argv: Sequence[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     logging.basicConfig(format='%(message)s')
-    logger.setLevel('INFO')
+    logger.setLevel(args.logging)
 
     if args.subparser:
         args.func(**args.__dict__)
