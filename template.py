@@ -171,6 +171,7 @@ def make_parser() -> argparse.ArgumentParser:
         '--run-post-script',
         choices=YesNoAsk.__members__.values(),
         default=config['run-post-script'],
+        type=YesNoAsk,
     )
     init_parser.add_argument('repo')
     init_parser.add_argument('dir', type=Path)
