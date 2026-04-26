@@ -62,7 +62,7 @@ def clone_template(
     ]
     if branch:
         clone_cmd.extend(('--branch', branch))
-    run(clone_cmd).check_returncode()
+    run(clone_cmd, check=True)
 
     data = {
         'project': {'name': dir.name},
@@ -90,14 +90,14 @@ def clone_template(
         if callable(run_post_script):
             run_post_script = run_post_script(post_script)
         if run_post_script:
-            run([post_script], cwd=dir)
+            run([post_script], check=True, cwd=dir)
         else:
             logger.info('Skipped post script execution.')
         post_script.unlink()
 
-    run(['git', 'init'], cwd=dir).check_returncode()
-    run(['git', 'add', '-A'], cwd=dir).check_returncode()
-    run(['git', 'commit', '-m', message], cwd=dir).check_returncode()
+    run(['git', 'init'], check=True, cwd=dir)
+    run(['git', 'add', '-A'], check=True, cwd=dir)
+    run(['git', 'commit', '-m', message], check=True, cwd=dir)
 
 
 def make_default_config() -> dict:
