@@ -143,9 +143,7 @@ def load_config() -> dict:
     return config
 
 
-def make_parser() -> argparse.ArgumentParser:
-    config = load_config()
-
+def make_parser(config: dict) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='subparser')
     init_parser = subparsers.add_parser('init')
@@ -194,14 +192,15 @@ def make_parser() -> argparse.ArgumentParser:
 
 
 def cli(argv: Sequence[str] | None = None) -> None:
-    parser = make_parser()
+    config = load_config()
+    parser = make_parser(config)
     args = parser.parse_args(argv)
 
     logging.basicConfig(format='%(message)s')
     logger.setLevel(args.logging)
 
     if args.subparser:
-        args.func(**args.__dict__)
+        args.func(**args.__dict__, config=config)
     else:
         parser.print_help(file=sys.stderr)
         sys.exit(1)
@@ -252,9 +251,9 @@ def do_init(
     message: str,
     run_post_script: YesNoAsk,
     branch: str | None,
+    config: dict,
     **_,
 ) -> None:
-    config = load_config()
     repo = config['types'][type_].format(repo)
     if dir.exists():
         print(f'directory already exists: {dir}', file=sys.stderr)
