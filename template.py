@@ -187,19 +187,20 @@ def make_parser(config: dict) -> argparse.ArgumentParser:
 
 
 def cli(argv: Sequence[str] | None = None) -> None:
+    logging.basicConfig(format='%(message)s')
+
     try:
         config = load_config()
     except json.JSONDecodeError as err:
-        print(f"couldn't decode config: {err}", file=sys.stderr)
+        logger.critical(f"couldn't decode config: {err}")
         sys.exit(1)
     except TypeError as err:
-        print(f'user config error: {err}', file=sys.stderr)
+        logger.critical(f'user config error: {err}')
         sys.exit(1)
 
     parser = make_parser(config)
     args = parser.parse_args(argv)
 
-    logging.basicConfig(format='%(message)s')
     logger.setLevel(args.logging)
 
     if args.subparser:
@@ -234,7 +235,7 @@ def do_config(key: str, value: str | None, **_) -> None:
         try:
             merge_configs(make_default_config(), user_config)
         except TypeError as err:
-            print(f"couldn't modify config: {err}", file=sys.stderr)
+            logger.critical(f"couldn't modify config: {err}")
             sys.exit(1)
 
     _config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -259,7 +260,7 @@ def do_init(
 ) -> None:
     repo = config['types'][type_].format(repo)
     if dir.exists():
-        print(f'directory already exists: {dir}', file=sys.stderr)
+        logger.critical(f'directory already exists: {dir}')
         sys.exit(1)
     try:
         clone_template(
@@ -276,7 +277,7 @@ def do_init(
         )
     except Exception as err:
         shutil.rmtree(dir, ignore_errors=True)
-        print(err, file=sys.stderr)
+        logger.critical(err)
         sys.exit(1)
 
 
