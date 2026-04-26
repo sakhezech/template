@@ -132,14 +132,9 @@ def merge_configs(config: dict, user_config: dict) -> None:
 
 def load_config() -> dict:
     config = make_default_config()
-    try:
-        if _config_path.exists():
-            user_config = json.loads(_config_path.read_text())
-            merge_configs(config, user_config)
-    except json.JSONDecodeError as err:
-        print(f"couldn't decode config: {err}", file=sys.stderr)
-    except TypeError as err:
-        print(f'user config error: {err}', file=sys.stderr)
+    if _config_path.exists():
+        user_config = json.loads(_config_path.read_text())
+        merge_configs(config, user_config)
     return config
 
 
@@ -192,7 +187,15 @@ def make_parser(config: dict) -> argparse.ArgumentParser:
 
 
 def cli(argv: Sequence[str] | None = None) -> None:
-    config = load_config()
+    try:
+        config = load_config()
+    except json.JSONDecodeError as err:
+        print(f"couldn't decode config: {err}", file=sys.stderr)
+        sys.exit(1)
+    except TypeError as err:
+        print(f'user config error: {err}', file=sys.stderr)
+        sys.exit(1)
+
     parser = make_parser(config)
     args = parser.parse_args(argv)
 
