@@ -135,14 +135,29 @@ def merge_configs(config: dict, user_config: dict) -> None:
 
             if not config_value:
                 config_value.update(user_value)
+
             elif isinstance(items[0][0], type):
                 key_type, val_type = items[0]
-                for k, v in user_value.items():
-                    if k is key_type:
-                        continue
-                    k = convert_to_type(k, key_type)
-                    v = convert_to_type(v, val_type)
-                    config_value[k] = v
+                assert isinstance(val_type, (type, Callable))
+
+                if isinstance(val_type, type):
+                    for k, v in user_value.items():
+                        if k is key_type:
+                            continue
+                        k = convert_to_type(k, key_type)
+                        v = convert_to_type(v, val_type)
+                        config_value[k] = v
+
+                else:
+                    for k, v in user_value.items():
+                        if k is key_type:
+                            continue
+                        k = convert_to_type(k, key_type)
+                        subconfig = val_type()
+                        assert isinstance(subconfig, dict)
+                        merge_configs(subconfig, v)
+                        config_value[k] = subconfig
+
             else:
                 merge_configs(config_value, user_value)
         else:
