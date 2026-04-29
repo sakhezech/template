@@ -278,7 +278,7 @@ def do_init(
         message = config['message']
         assert isinstance(message, str)
     if run_post_script is None:
-        run_post_script = config['run_post_script']
+        run_post_script = config['run-post-script']
         assert isinstance(run_post_script, YesNoAsk)
 
     repo = config['types'][type_].format(repo)
