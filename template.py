@@ -102,12 +102,24 @@ def clone_template(
 
 def make_default_config() -> dict:
     return {
-        'types': {'raw': '{}', 'github': 'https://github.com/{}'},
+        'types': {str: str, 'raw': '{}', 'github': 'https://github.com/{}'},
         'default': 'raw',
         'message': 'feat: initial commit',
         'run-post-script': YesNoAsk.ASK,
         'data': {},
     }
+
+
+def convert_to_type[T](v: Any, type_: type[T]) -> T:
+    if not isinstance(v, type_):
+        try:
+            return type_(v)  # type: ignore
+        except Exception:
+            raise TypeError(
+                f"config and user value types don't match: "
+                f'{type_} != {type(v)}'
+            )
+    return v
 
 
 def merge_configs(config: dict, user_config: dict) -> None:
@@ -116,16 +128,23 @@ def merge_configs(config: dict, user_config: dict) -> None:
             continue
 
         config_value = config[key]
-        if type(config_value) is not type(user_value):
-            try:
-                user_value = type(config_value)(user_value)
-            except Exception:
-                raise TypeError(
-                    f"config and user value types don't match: "
-                    f'{type(config_value)} != {type(user_value)} for {key}'
-                )
+        user_value = convert_to_type(user_value, type(config_value))
+
         if isinstance(config_value, dict):
-            config_value.update(user_value)
+            items = tuple(config_value.items())
+
+            if not config_value:
+                config_value.update(user_value)
+            elif isinstance(items[0][0], type):
+                key_type, val_type = items[0]
+                for k, v in user_value.items():
+                    if k is key_type:
+                        continue
+                    k = convert_to_type(k, key_type)
+                    v = convert_to_type(v, val_type)
+                    config_value[k] = v
+            else:
+                merge_configs(config_value, user_value)
         else:
             config[key] = user_value
 
