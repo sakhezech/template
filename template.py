@@ -150,23 +150,17 @@ def make_parser(config: dict) -> argparse.ArgumentParser:
         '-v', '--version', action='version', version=__version__
     )
 
-    init_parser.add_argument(
-        '-m',
-        '--message',
-        default=config['message'],
-    )
+    init_parser.add_argument('-m', '--message')
     init_parser.add_argument(
         '-t',
         '--type',
         choices=config['types'].keys(),
-        default=config['default'],
         dest='type_',
     )
     init_parser.add_argument('-b', '--branch')
     init_parser.add_argument(
         '--run-post-script',
         choices=YesNoAsk.__members__.values(),
-        default=config['run-post-script'],
         type=YesNoAsk,
     )
     init_parser.add_argument('repo')
@@ -251,13 +245,23 @@ def _display_and_ask(post_script_path: Path) -> bool:
 def do_init(
     repo: str,
     dir: Path,
-    type_: str,
-    message: str,
-    run_post_script: YesNoAsk,
+    type_: str | None,
+    message: str | None,
+    run_post_script: YesNoAsk | None,
     branch: str | None,
     config: dict,
     **_,
 ) -> None:
+    if type_ is None:
+        type_ = config['default']
+        assert isinstance(type_, str)
+    if message is None:
+        message = config['message']
+        assert isinstance(message, str)
+    if run_post_script is None:
+        run_post_script = config['run_post_script']
+        assert isinstance(run_post_script, YesNoAsk)
+
     repo = config['types'][type_].format(repo)
     if dir.exists():
         logger.critical(f'directory already exists: {dir}')
