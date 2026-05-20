@@ -111,6 +111,8 @@ def make_default_config() -> dict:
 
 
 def convert_to_type[T](v: Any, type_: type[T]) -> T:
+    if type_ is Any:
+        return v
     if not isinstance(v, type_):
         try:
             return type_(v)  # type: ignore
