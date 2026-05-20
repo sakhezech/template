@@ -100,9 +100,20 @@ def clone_template(
     run(['git', 'commit', '-m', message], check=True, cwd=dir)
 
 
+class SchemaDict(dict):
+    def __init__(
+        self, *args, schema: tuple[type, type | Callable[[], dict]], **kwargs
+    ) -> None:
+        self.schema = schema
+        super().__init__(*args, **kwargs)
+
+
 def make_default_config() -> dict:
     return {
-        'types': {str: str, 'raw': '{}', 'github': 'https://github.com/{}'},
+        'types': SchemaDict(
+            {'raw': '{}', 'github': 'https://github.com/{}'},
+            schema=(str, str),
+        ),
         'default': 'raw',
         'message': 'feat: initial commit',
         'run-post-script': YesNoAsk.ASK,
@@ -130,39 +141,34 @@ def merge_configs(config: dict, user_config: dict) -> None:
             continue
 
         config_value = config[key]
-        user_value = convert_to_type(user_value, type(config_value))
 
-        if isinstance(config_value, dict):
-            items = tuple(config_value.items())
+        if isinstance(config_value, SchemaDict):
+            assert isinstance(user_value, dict)
 
-            if not config_value:
-                config_value.update(user_value)
+            key_type, val_type = config_value.schema
 
-            elif isinstance(items[0][0], type):
-                key_type, val_type = items[0]
-                assert isinstance(val_type, (type, Callable))
-
-                if isinstance(val_type, type):
-                    for k, v in user_value.items():
-                        if k is key_type:
-                            continue
-                        k = convert_to_type(k, key_type)
-                        v = convert_to_type(v, val_type)
-                        config_value[k] = v
-
-                else:
-                    for k, v in user_value.items():
-                        if k is key_type:
-                            continue
-                        k = convert_to_type(k, key_type)
-                        subconfig = val_type()
-                        assert isinstance(subconfig, dict)
-                        merge_configs(subconfig, v)
-                        config_value[k] = subconfig
+            if isinstance(val_type, type):
+                for k, v in user_value.items():
+                    k = convert_to_type(k, key_type)
+                    v = convert_to_type(v, val_type)
+                    config_value[k] = v
 
             else:
+                for k, v in user_value.items():
+                    k = convert_to_type(k, key_type)
+                    subconfig = val_type()
+                    merge_configs(subconfig, v)
+                    config_value[k] = subconfig
+
+        elif isinstance(config_value, dict):
+            user_value = convert_to_type(user_value, type(config_value))
+            if not config_value:
+                config_value.update(user_value)
+            else:
                 merge_configs(config_value, user_value)
+
         else:
+            user_value = convert_to_type(user_value, type(config_value))
             config[key] = user_value
 
 
