@@ -143,7 +143,7 @@ def merge_configs(config: dict, user_config: dict) -> None:
         config_value = config[key]
 
         if isinstance(config_value, SchemaDict):
-            assert isinstance(user_value, dict)
+            user_value = convert_to_type(user_value, dict)
 
             key_type, val_type = config_value.schema
 
